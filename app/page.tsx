@@ -1,9 +1,54 @@
+"use client"; // Add "use client" at the top
+import { useState, useEffect } from 'react'; // Import useState and useEffect
+import { useRouter } from 'next/navigation'; // Import useRouter
 import Image from "next/image";
 
+// Define a type for user data
+interface UserData {
+  name?: string;
+  email?: string;
+  // Add other properties as needed
+}
+
 export default function Home() {
+  const [userData, setUserData] = useState<UserData | null>(null); // Initialize userData state
+  const router = useRouter();
+
+  useEffect(() => {
+    const storedUserData = localStorage.getItem('userData');
+    const token = localStorage.getItem('token');
+
+    if (storedUserData && token) {
+      try {
+        const parsedUserData = JSON.parse(storedUserData);
+        setUserData(parsedUserData);
+      } catch (error) {
+        console.error("Failed to parse user data:", error);
+        // Handle parsing error, e.g., by clearing stored data or redirecting
+        localStorage.removeItem('userData');
+        localStorage.removeItem('token');
+        router.push('/login');
+      }
+    } else {
+      // Only redirect if not on login page already (though this is home page)
+      if (router.pathname !== '/login') { 
+        router.push('/login');
+      }
+    }
+  }, [router]);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+    <div className="grid grid-rows-[auto_1fr_auto] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
+        {userData ? (
+          <div className="text-center sm:text-left">
+            <h1 className="text-3xl font-bold">Welcome, {userData.name || userData.email}!</h1>
+            {/* You can display other user details here */}
+            {/* For example: <p>Email: {userData.email}</p> */}
+          </div>
+        ) : (
+          <p>Loading user data...</p> // Or some other placeholder while loading/redirecting
+        )}
         <Image
           className="dark:invert"
           src="/next.svg"

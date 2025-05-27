@@ -1,7 +1,41 @@
 // app/login/page.js
+"use client"; // Add "use client" at the top
+import { useState } from 'react'; // Import useState
+import { useRouter } from 'next/navigation'; // Import useRouter
 import Navbar from "@/components/Navbar";
 
 export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const handleLogin = async (e) => {
+    e.preventDefault(); // Prevent default form submission
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`https://kickstart-59ea.onrender.com/api/users/login?email=${email}&password=${password}`);
+      const data = await response.json();
+
+      if (response.status === 200) {
+        localStorage.setItem('userData', JSON.stringify(data.user));
+        localStorage.setItem('token', data.token);
+        router.push('/');
+      } else if (response.status === 401) {
+        setError(data.message || "Invalid credentials");
+      } else {
+        setError("Login failed. Please try again.");
+      }
+    } catch (err) {
+      setError("Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
     <Navbar />
@@ -15,12 +49,16 @@ export default function LoginPage() {
             Ready to see what’s new? Sign in to get personalized recommendations, track your orders, and manage your account.
           </p>
 
-          <form className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
+            {error && <p className="text-red-500 text-sm mb-4">{error}</p>} {/* Display error message */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
               <input
                 type="email"
                 id="email"
+                value={email} // Set value to email state
+                onChange={(e) => setEmail(e.target.value)} // Update email state onChange
+                required // Add required attribute
                 className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Example@email.com"
               />
@@ -30,6 +68,9 @@ export default function LoginPage() {
               <input
                 type="password"
                 id="password"
+                value={password} // Set value to password state
+                onChange={(e) => setPassword(e.target.value)} // Update password state onChange
+                required // Add required attribute
                 className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="At least 8 characters"
               />
@@ -40,9 +81,10 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full bg-gray-800 text-white py-2 rounded-lg hover:bg-gray-900 transition"
+              disabled={loading} // Disable button when loading
+              className="w-full bg-gray-800 text-white py-2 rounded-lg hover:bg-gray-900 transition disabled:opacity-50"
             >
-              Sign in
+              {loading ? "Signing in..." : "Sign in"} {/* Change button text when loading */}
             </button>
           </form>
 
