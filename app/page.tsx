@@ -1,6 +1,6 @@
 "use client"; // Add "use client" at the top
 import { useState, useEffect } from 'react'; // Import useState and useEffect
-import { useRouter } from 'next/navigation'; // Import useRouter
+import { useRouter, usePathname } from 'next/navigation'; // Import useRouter and usePathname
 import Image from "next/image";
 
 // Define a type for user data
@@ -13,6 +13,7 @@ interface UserData {
 export default function Home() {
   const [userData, setUserData] = useState<UserData | null>(null); // Initialize userData state
   const router = useRouter();
+  const pathname = usePathname(); // Get current pathname
 
   useEffect(() => {
     const storedUserData = localStorage.getItem('userData');
@@ -31,11 +32,11 @@ export default function Home() {
       }
     } else {
       // Only redirect if not on login page already (though this is home page)
-      if (router.pathname !== '/login') { 
+      if (pathname !== '/login') { 
         router.push('/login');
       }
     }
-  }, [router]);
+  }, [router, pathname]); // Add pathname to dependency array
 
   return (
     <div className="grid grid-rows-[auto_1fr_auto] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
