@@ -25,7 +25,7 @@ export default function Navbar() {
     };
     window.addEventListener('storage', handleStorageChange);
     // Also listen for custom events if login/logout happens without page reload
-    window.addEventListener('authChange', handleStorageChange); 
+    window.addEventListener('authChange', handleStorageChange);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -38,7 +38,7 @@ export default function Navbar() {
     localStorage.removeItem('token');
     setIsLoggedIn(false);
     // Dispatch a custom event to notify other components (like Navbar)
-    window.dispatchEvent(new CustomEvent('authChange')); 
+    window.dispatchEvent(new CustomEvent('authChange'));
     router.push('/login');
   };
 
@@ -62,19 +62,7 @@ export default function Navbar() {
           <a href="/faq" className="text-gray-500 hover:text-blue-600">FAQ</a>
           <a href="/about" className="text-gray-500 hover:text-blue-600">About Us</a>
           <a href="/contact" className="text-gray-500 hover:text-blue-600">Contact</a>
-          {isLoggedIn ? (
-            <button
-              onClick={handleLogout}
-              className="bg-red-500 text-white px-3 py-1.5 rounded-md hover:bg-red-600 transition"
-            >
-              Logout
-            </button>
-          ) : (
-            <>
-              <a href="/login" className="text-gray-500 hover:text-blue-600">Login</a>
-              <a href="/signup" className="text-gray-500 hover:text-blue-600">Signup</a>
-            </>
-          )}
+
         </div>
       </div>
       {/* Mobile menu */}
