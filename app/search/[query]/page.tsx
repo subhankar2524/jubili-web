@@ -1,13 +1,13 @@
 "use client";
-import { useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { searchProducts } from "@/lib/api/products";
 import Navbar from "@/components/NavBar";
 import ProductCard from "@/components/ProductCard";
 
 export default function SearchPage() {
-    const searchParams = useSearchParams();
-    const productName = searchParams.get("productName") || "";
+    const params = useParams();
+    const productName = params.query as string || "";
     const [results, setResults] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -18,7 +18,6 @@ export default function SearchPage() {
             setError(null);
             searchProducts(productName)
                 .then(data => {
-                    console.log(data);
                     setResults(data);
                 })
                 .catch(err => setError(err.message))
@@ -38,7 +37,6 @@ export default function SearchPage() {
                             Found {results.length} results for <b>{productName}</b>
                         </h1>
                         <h1>
-
                             {loading && <p>Loading...</p>}
                         </h1>
                         {error && <p style={{ color: "red" }}>{error}</p>}
