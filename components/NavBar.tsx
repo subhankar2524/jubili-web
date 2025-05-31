@@ -14,7 +14,12 @@ const Navbar = () => {
     return (
         <nav className="flex items-center px-8 h-[60px] bg-white font-sans gap-8">
             {/* Logo */}
-            <div className="font-bold text-2xl tracking-wide mr-8">Jubili</div>
+            <div
+                className="font-bold text-2xl tracking-wide mr-8 cursor-pointer"
+                onClick={() => router.push("/")}
+            >
+                Jubili
+            </div>
 
             {/* Search */}
             <form onSubmit={handleSearch} className="relative flex-1 max-w-[350px] mr-8">

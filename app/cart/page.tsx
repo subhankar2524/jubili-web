@@ -1,7 +1,11 @@
-import Image from "next/image";
+"use client";
 
-export default function CartPage() {
+import { toast } from "react-toastify";
+
+export default function ExampleButton() {
   return (
-    <div>Cart</div>
+    <button onClick={() => toast.success("Success message!")}>
+      Show Toast
+    </button>
   );
 }

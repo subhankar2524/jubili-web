@@ -19,6 +19,8 @@ export default function SearchPage() {
             searchProducts(productName)
                 .then(data => {
                     setResults(data);
+                    console.log(data);
+                    
                 })
                 .catch(err => setError(err.message))
                 .finally(() => setLoading(false));

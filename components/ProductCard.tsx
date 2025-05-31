@@ -13,13 +13,13 @@ interface ProductCardProps {
         brand?: string;
         likeCount: number;
         reviews?: number;
-        isLiked?: boolean;
+        likedByUser: boolean;
     };
 }
 
 const ProductCard: React.FC<{ product: ProductCardProps["product"] }> = ({ product }) => {
     const [bgImage, setBgImage] = useState(product.imageUrls?.[0]);
-    const [isLiked, setIsLiked] = useState(product.isLiked || false);
+    const [isLiked, setIsLiked] = useState(product.likedByUser || false);
     const [likeCount, setLikeCount] = useState(product.likeCount || 0);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -71,7 +71,7 @@ const ProductCard: React.FC<{ product: ProductCardProps["product"] }> = ({ produ
                     </div>
                     <div className="w-15" />
                     <div className="flex items-center gap-15">
-                        <div className="text-green-600 text-lg font-bold">₹{product.price}</div>
+                        <div className="text-green-600 text-lg font-semibold ">₹{product.price}</div>
                         <button className="text-2xl px-2"><b>⋮</b></button>
                     </div>
                 </div>

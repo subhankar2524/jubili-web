@@ -1,4 +1,5 @@
 import Cookies from "js-cookie";
+import { toast } from "react-toastify";
 import { json } from "stream/consumers";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -21,6 +22,7 @@ export async function toggleProductLike(productId: string, productCategory: stri
   const token = Cookies.get("token");
   
   if (!token) {
+    toast.error("Please login to like");
     throw new Error("Authentication token not found");
   }
 
@@ -40,5 +42,9 @@ export async function toggleProductLike(productId: string, productCategory: stri
     throw new Error("Failed to toggle product like");
   }
 
-  return res.json();
+  const data = await res.json();
+  if (data?.message) {
+    toast(data.message);
+  }
+  return data;
 }
