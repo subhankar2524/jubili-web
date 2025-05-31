@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { toggleProductLike } from "@/lib/api/products";
 
 interface ProductCardProps {
     product: {
@@ -12,11 +13,34 @@ interface ProductCardProps {
         brand?: string;
         likeCount: number;
         reviews?: number;
+        isLiked?: boolean;
     };
 }
 
 const ProductCard: React.FC<{ product: ProductCardProps["product"] }> = ({ product }) => {
     const [bgImage, setBgImage] = useState(product.imageUrls?.[0]);
+    const [isLiked, setIsLiked] = useState(product.isLiked || false);
+    const [likeCount, setLikeCount] = useState(product.likeCount || 0);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleLikeToggle = async () => {
+        if (isLoading) return;
+
+        setIsLoading(true);
+        try {
+            await toggleProductLike(product.productId, product.productCategory);
+            
+            // Toggle the like state and update count
+            const newIsLiked = !isLiked;
+            setIsLiked(newIsLiked);
+            setLikeCount(prev => newIsLiked ? prev + 1 : prev - 1);
+        } catch (error) {
+            console.error("Failed to toggle like:", error);
+            // You might want to show a toast notification here
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <div className="relative bg-white overflow-hidden flex flex-col">
@@ -69,10 +93,22 @@ const ProductCard: React.FC<{ product: ProductCardProps["product"] }> = ({ produ
 
                 {/* Actions Row */}
                 <div className="w-full md:w-2/3 lg:w-1/2 flex items-center gap-6 mb-2 px-4">
-                    <div className="flex items-center gap-1 text-gray-700">
-                        <img src="/icons/like_outlined.svg" alt="Favourites" width={24} height={24} />
-                    </div>
-                    {product.likeCount ?? 0}
+                    <button 
+                        onClick={handleLikeToggle}
+                        disabled={isLoading}
+                        className={`flex items-center gap-1 transition-all duration-200 ${
+                            isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-110'
+                        }`}
+                    >
+                        <img 
+                            src={isLiked ? "/icons/like_filled.svg" : "/icons/like_outlined.svg"} 
+                            alt={isLiked ? "Liked" : "Like"} 
+                            width={24} 
+                            height={24}
+                            className={`transition-all duration-200 ${isLiked ? 'filter-blue' : ''}`}
+                        />
+                    </button>
+                    <span className="text-gray-700">{likeCount}</span>
                     <div className="flex-2" />
                     <button className="flex items-center gap-1 text-gray-700">
                         <img src="/icons/share.svg" alt="share-product" width={24} height={24} />

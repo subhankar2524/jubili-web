@@ -1,25 +1,40 @@
-import React from "react";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const Navbar = () => {
+    const [searchQuery, setSearchQuery] = useState("");
+    const router = useRouter();
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (searchQuery.trim()) {
+            router.push(`/search/${encodeURIComponent(searchQuery.trim())}`);
+        }
+    };
     return (
         <nav className="flex items-center px-8 h-[60px] bg-white font-sans gap-8">
             {/* Logo */}
             <div className="font-bold text-2xl tracking-wide mr-8">Jubili</div>
 
             {/* Search */}
-            <div className="relative flex-1 max-w-[350px] mr-8">
+            <form onSubmit={handleSearch} className="relative flex-1 max-w-[350px] mr-8">
                 <input
                     type="text"
                     placeholder="Search here"
                     className="w-full py-2 pr-10 pl-4 rounded-full border border-gray-200 text-base outline-none bg-[#fafafa]"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                <button 
+                    type="submit"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
+                >
                     <svg width="18" height="18" fill="none" stroke="#BDBDBD" strokeWidth="2" viewBox="0 0 24 24">
                         <circle cx="11" cy="11" r="8" />
                         <line x1="21" y1="21" x2="16.65" y2="16.65" />
                     </svg>
-                </span>
-            </div>
+                </button>
+            </form>
 
             {/* Menu - hidden on mobile */}
             <div className="hidden md:flex items-center gap-6 mr-auto">

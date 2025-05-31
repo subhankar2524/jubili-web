@@ -11,3 +11,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+.filter-blue {
+  filter: hue-rotate(200deg) saturate(2) brightness(0.8);
+}
