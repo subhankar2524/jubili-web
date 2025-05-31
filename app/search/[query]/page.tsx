@@ -41,7 +41,7 @@ export default function SearchPage() {
                         </h1>
                         {error && <p style={{ color: "red" }}>{error}</p>}
                     </div>
-                    <div className="flex flex-col gap-10 mt-6">
+                    <div className="flex flex-col mt-6">
                         {results.map((product) => (
                             <ProductCard key={product.productId} product={product} />
                         ))}
