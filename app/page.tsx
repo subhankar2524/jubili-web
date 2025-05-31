@@ -18,13 +18,13 @@ export default function HomePage() {
     router.push("/login");
   };
 
-  // Sample product data
+  // Sample product data with online images
   const sampleProducts = [
     {
       productId: "1",
       productName: "Classic Shoe",
       productDescription: "Comfortable everyday wear",
-      imageUrls: ["/sample-shoe-1.jpg"],
+      imageUrls: ["https://picsum.photos/seed/shoe1/400/300"],
       price: "1299",
       size: "M",
       brand: "Adidas",
@@ -35,7 +35,7 @@ export default function HomePage() {
       productId: "2",
       productName: "Streetwear Shoe",
       productDescription: "Urban style for daily use",
-      imageUrls: ["/sample-shoe-2.jpg"],
+      imageUrls: ["https://picsum.photos/seed/shoe2/400/300"],
       price: "1499",
       size: "L",
       brand: "Nike",
@@ -46,7 +46,7 @@ export default function HomePage() {
       productId: "3",
       productName: "Skate Shoe",
       productDescription: "Perfect for skaters and casual wear",
-      imageUrls: ["/sample-shoe-3.jpg"],
+      imageUrls: ["https://picsum.photos/seed/shoe3/400/300"],
       price: "1199",
       size: "M",
       brand: "Vans",
@@ -71,11 +71,11 @@ export default function HomePage() {
           <div className="bg-[#F5F5F5] rounded-lg p-6 flex flex-col justify-between">
             <div>
               <span className="text-sm font-medium">Outdoor Active</span>
-              <div className="h-40 mt-2 bg-yellow-400 rounded-lg"></div>
+              <img src="https://picsum.photos/seed/outdoor/400/160" alt="Outdoor Active" className="mt-2 rounded-lg w-full h-40 object-cover" />
             </div>
             <div className="mt-4">
               <span className="text-sm font-medium">Casual Content</span>
-              <div className="h-40 mt-2 bg-red-500 rounded-lg"></div>
+              <img src="https://picsum.photos/seed/casual/400/160" alt="Casual Content" className="mt-2 rounded-lg w-full h-40 object-cover" />
             </div>
           </div>
         </section>
@@ -84,21 +84,19 @@ export default function HomePage() {
         <section className="mt-12">
           <h2 className="text-2xl font-bold mb-4">Casual Inspirations</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-[#F5F5F5] rounded-lg p-6 flex flex-col">
-              <h3 className="text-lg font-medium mb-2">Casual</h3>
-              <div className="flex-grow bg-gray-300 rounded-lg mb-4"></div>
-              <button className="border border-black rounded-full px-4 py-2 text-sm">Shop Now</button>
-            </div>
-            <div className="bg-[#F5F5F5] rounded-lg p-6 flex flex-col">
-              <h3 className="text-lg font-medium mb-2">Say it with Shirt</h3>
-              <div className="flex-grow bg-gray-300 rounded-lg mb-4"></div>
-              <button className="border border-black rounded-full px-4 py-2 text-sm">Shop Now</button>
-            </div>
-            <div className="bg-[#F5F5F5] rounded-lg p-6 flex flex-col">
-              <h3 className="text-lg font-medium mb-2">Funky new get-up</h3>
-              <div className="flex-grow bg-gray-300 rounded-lg mb-4"></div>
-              <button className="border border-black rounded-full px-4 py-2 text-sm">Shop Now</button>
-            </div>
+            {["casual1", "shirt", "funky"].map((seed, idx) => (
+              <div key={idx} className="bg-[#F5F5F5] rounded-lg p-6 flex flex-col">
+                <h3 className="text-lg font-medium mb-2">
+                  {["Casual", "Say it with Shirt", "Funky new get-up"][idx]}
+                </h3>
+                <img
+                  src={`https://picsum.photos/seed/${seed}/400/200`}
+                  alt="Inspiration"
+                  className="flex-grow rounded-lg mb-4 object-cover"
+                />
+                <button className="border border-black rounded-full px-4 py-2 text-sm">Shop Now</button>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -114,7 +112,11 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {sampleProducts.map((product) => (
               <div key={product.productId} className="bg-gray-100 rounded-lg p-4">
-                <div className="h-32 bg-white rounded-lg mb-2"></div>
+                <img
+                  src={product.imageUrls[0]}
+                  alt={product.productName}
+                  className="h-32 w-full object-cover rounded-lg mb-2"
+                />
                 <h3 className="font-medium">{product.productName}</h3>
                 <p className="text-sm text-gray-600">${product.price}</p>
               </div>
@@ -151,21 +153,17 @@ export default function HomePage() {
         <section className="mt-12 mb-12">
           <h2 className="text-2xl font-bold mb-6">Why you'll love to shop on our website</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 bg-black rounded-full mb-4 flex items-center justify-center text-white">❤️</div>
-              <h3 className="font-bold mb-2">Take care with love</h3>
-              <p className="text-sm text-gray-600">We take care of all your shopping needs with attention to detail and personalized service.</p>
-            </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 bg-black rounded-full mb-4 flex items-center justify-center text-white">📞</div>
-              <h3 className="font-bold mb-2">Friendly Customer Service</h3>
-              <p className="text-sm text-gray-600">Our team is always ready to assist you with any questions or concerns about your purchase.</p>
-            </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="w-12 h-12 bg-black rounded-full mb-4 flex items-center justify-center text-white">🚚</div>
-              <h3 className="font-bold mb-2">Refined Process</h3>
-              <p className="text-sm text-gray-600">Our streamlined shopping and delivery process ensures a smooth experience from browsing to receiving your items.</p>
-            </div>
+            {[
+              { icon: "❤️", title: "Take care with love", desc: "We take care of all your shopping needs with attention to detail and personalized service." },
+              { icon: "📞", title: "Friendly Customer Service", desc: "Our team is always ready to assist you with any questions or concerns about your purchase." },
+              { icon: "🚚", title: "Refined Process", desc: "Our streamlined shopping and delivery process ensures a smooth experience from browsing to receiving your items." },
+            ].map((item, idx) => (
+              <div key={idx} className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 bg-black rounded-full mb-4 flex items-center justify-center text-white">{item.icon}</div>
+                <h3 className="font-bold mb-2">{item.title}</h3>
+                <p className="text-sm text-gray-600">{item.desc}</p>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -174,7 +172,7 @@ export default function HomePage() {
           <h2 className="text-2xl font-bold mb-6">From The Blog</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="bg-gray-100 rounded-lg overflow-hidden">
-              <div className="h-64 bg-gray-300"></div>
+              <img src="https://picsum.photos/seed/blog/600/300" alt="Blog Image" className="w-full h-64 object-cover" />
             </div>
             <div>
               <h3 className="text-xl font-bold mb-3">How to combine your daily outfit to looks fresh and cool.</h3>
