@@ -22,6 +22,7 @@ const ProductCard: React.FC<{ product: ProductCardProps["product"] }> = ({ produ
     const [isLiked, setIsLiked] = useState(product.likedByUser || false);
     const [likeCount, setLikeCount] = useState(product.likeCount || 0);
     const [isLoading, setIsLoading] = useState(false);
+    const [descExpanded, setDescExpanded] = useState(false);
 
     const handleLikeToggle = async () => {
         if (isLoading) return;
@@ -118,9 +119,29 @@ const ProductCard: React.FC<{ product: ProductCardProps["product"] }> = ({ produ
                 </div>
 
                 {/* Description */}
-                <div className="text-base text-justify font-medium mb-2 w-full md:w-2/3 lg:w-1/2 px-4">
-                    {product.productDescription}
-                </div>
+<div
+            className={`text-base text-justify font-medium mb-2 w-full md:w-2/3 lg:w-1/2 px-4 cursor-pointer select-none`}
+            style={
+                descExpanded
+                    ? {}
+                    : {
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                    }
+            }
+            onClick={() => setDescExpanded((prev) => !prev)}
+            title={descExpanded ? "Show less" : "Show more"}
+        >
+            {product.productDescription}
+            {!descExpanded && (
+                <span className="text-blue-500 ml-2">See more</span>
+            )}
+            {descExpanded && (
+                <span className="text-blue-500 ml-2">See less</span>
+            )}
+        </div>
 
                 {/* Buy Row */}
                 <div className="flex items-center gap-3 mt-2 w-full md:w-2/3 lg:w-1/2 px-4">
