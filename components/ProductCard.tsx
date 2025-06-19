@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { toggleProductLike } from "@/lib/api/products";
+import { toggleProductLike, addToCart } from "@/lib/api/products";
+import { getUser } from "@/utils/storage";
 
 interface ProductCardProps {
     product: {
@@ -23,6 +24,7 @@ const ProductCard: React.FC<{ product: ProductCardProps["product"] }> = ({ produ
     const [likeCount, setLikeCount] = useState(product.likeCount || 0);
     const [isLoading, setIsLoading] = useState(false);
     const [descExpanded, setDescExpanded] = useState(false);
+    const [cartLoading, setCartLoading] = useState(false);
 
     const handleLikeToggle = async () => {
         if (isLoading) return;
@@ -40,6 +42,29 @@ const ProductCard: React.FC<{ product: ProductCardProps["product"] }> = ({ produ
             // You might want to show a toast notification here
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleAddToCart = async () => {
+        console.log("Adding to cart");
+        if (cartLoading) return;
+        setCartLoading(true);
+        try {
+            const user = getUser();
+            console.log("User:", user);
+            if (!user || !user.userId) {
+                throw new Error("User not found. Please login.");
+            }
+            await addToCart({
+                userId: user.userId,
+                productId: product.productId,
+                quantity: "1",
+            });
+            // Optionally, show a toast or update UI
+        } catch (error) {
+            console.error("Failed to add to cart:", error);
+        } finally {
+            setCartLoading(false);
         }
     };
 
@@ -146,7 +171,7 @@ const ProductCard: React.FC<{ product: ProductCardProps["product"] }> = ({ produ
                 {/* Buy Row */}
                 <div className="flex items-center gap-3 mt-2 w-full md:w-2/3 lg:w-1/2 px-4">
                     <button className="bg-gray-900 text-white rounded-full px-10 py-2 text-lg font-semibold">Swipe to buy</button>
-                    <button className="bg-gray-100 rounded-full p-3">
+                    <button className="bg-gray-100 rounded-full p-3 hover:bg-gray-200 cursor-pointer" onClick={handleAddToCart} disabled={cartLoading}>
                         <img src="/icons/cart-bag.svg" alt="Favourites" width={24} height={24} />
                     </button>
                     <div className="flex-1" />
