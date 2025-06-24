@@ -45,7 +45,9 @@ export default function Navbar() {
   return (
     <nav className="bg-gray-50 border-b border-gray-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 py-2 flex justify-between items-center">
-        <div className="text-2xl font-bold text-gray-800">Jubili</div>
+        <div className="text-2xl font-bold text-gray-800 cursor-pointer flex items-center" onClick={() => router.push("/")}> 
+          <img src="/logo.svg" alt="Jubili Logo" className="h-8 w-auto" style={{ maxWidth: 120 }} />
+        </div>
         {/* Hamburger for mobile */}
         <button
           className="md:hidden p-2 rounded text-gray-700 focus:outline-none"

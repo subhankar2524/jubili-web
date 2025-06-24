@@ -15,10 +15,10 @@ const Navbar = () => {
         <nav className="flex items-center px-8 h-[60px] bg-white font-sans gap-8">
             {/* Logo */}
             <div
-                className="font-bold text-2xl tracking-wide mr-8 cursor-pointer"
+                className="font-bold text-2xl tracking-wide mr-8 cursor-pointer flex items-center"
                 onClick={() => router.push("/")}
             >
-                Jubili
+                <img src="/logo.svg" alt="Jubili Logo" className="h-8 w-auto" style={{ maxWidth: 120 }} />
             </div>
 
             {/* Search */}
@@ -43,11 +43,11 @@ const Navbar = () => {
 
             {/* Menu - hidden on mobile */}
             <div className="hidden md:flex items-center gap-6 mr-auto">
-                <div className="text-sm font-medium cursor-pointer flex items-center">
+                {/* <div className="text-sm font-medium cursor-pointer flex items-center">
                     All Category <span className="text-xs ml-1">▼</span>
                 </div>
                 <div className="text-sm font-medium cursor-pointer">Gift Cards</div>
-                <div className="text-sm font-medium cursor-pointer">Special Event</div>
+                <div className="text-sm font-medium cursor-pointer">Special Event</div> */}
             </div>
 
             {/* Icons - hidden on mobile */}
@@ -64,7 +64,7 @@ const Navbar = () => {
                 <span className="flex items-center cursor-pointer h-6 w-6">
                     <img src="/icons/user.svg" alt="Profile" width={24} height={24} />
                 </span>
-                <span className="flex items-center cursor-pointer h-6 w-6">
+                <span className="flex items-center cursor-pointer h-6 w-6" onClick={() => router.push("/cart")}>
                     <img src="/icons/cart.svg" alt="Cart" width={24} height={24} />
                 </span>
             </div>

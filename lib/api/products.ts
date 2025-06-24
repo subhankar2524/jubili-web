@@ -90,3 +90,50 @@ export async function addToCart({ userId, productId, quantity }: { userId: strin
   }
   return data;
 }
+
+export async function getCartItems(userId: string) {
+  const token = Cookies.get("token");
+  if (!token) {
+    toast.error("Please login to view cart");
+    throw new Error("Authentication token not found");
+  }
+  const url = `${BASE_URL}/api/user-actions/cart?userId=${userId}`;
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    throw new Error("Failed to fetch cart items");
+  }
+  return res.json();
+}
+
+export async function removeFromCart({ userId, productId }: { userId: string; productId: string }) {
+  const token = Cookies.get("token");
+  if (!token) {
+    toast.error("Please login to remove from cart");
+    throw new Error("Authentication token not found");
+  }
+  const res = await fetch(`${BASE_URL}/api/user-actions`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      userId,
+      productId,
+      actionType: "CART",
+    }),
+  });
+  if (!res.ok) {
+    toast.error("Failed to remove from cart");
+    throw new Error("Failed to remove from cart");
+  }
+  const data = await res.json();
+  if (data?.message) {
+    toast.success(data.message);
+  }
+  return data;
+}
