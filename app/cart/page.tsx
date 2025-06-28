@@ -7,8 +7,10 @@ import { getUser } from "@/utils/storage";
 import { getCartItems, addToCart, removeFromCart } from "@/lib/api/products";
 import CartProductCard from "@/components/CartProductCard";
 import { FaTrash } from "react-icons/fa";
+import { useRouter } from "next/navigation";
 
 export default function CartPage() {
+  const router = useRouter();
   const [cartData, setCartData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,13 +78,23 @@ export default function CartPage() {
     }
   };
 
+  const handleCheckout = () => {
+    router.push('/pay');
+  };
+
   return (
     <>
+      
+      {loading && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          {/* <div className="text-lg font-medium text-gray-700">Loading cart...</div> */}
+        </div>
+      )}
+
       <Navbar />
       <div className="max-w-6xl mx-auto p-4">
-
       <div className="py-4 text-4xl font-bold">
-        What's in your Bag?
+        What's in your Bag? 
       </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Left: Cart Items Table */}
@@ -96,7 +108,7 @@ export default function CartPage() {
                 <div className="col-span-2 text-center">Action</div>
               </div>
               {/* Table Body */}
-              {loading && <div className="p-6">Loading cart...</div>}
+              
               {error && <div className="p-6 text-red-500">{error}</div>}
               {cartData && cartData.items && cartData.items.length > 0 ? (
                 cartData.items.map((item: any) => (
@@ -134,7 +146,7 @@ export default function CartPage() {
                     {/* Total */}
                     <div className="flex items-center col-span-2 w-full md:justify-center mb-2 md:mb-0">
                       <span className="block md:hidden text-xs text-gray-500 min-w-[40px] mr-2">Total</span>
-                      <span className="font-semibold text-lg text-gray-900">${item.totalDiscountedPrice.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</span>
+                      <span className="font-semibold text-lg text-gray-900">₹{item.totalDiscountedPrice.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</span>
                     </div>
                     {/* Action */}
                     <div className="flex items-center col-span-2 w-full md:justify-center">
@@ -176,25 +188,30 @@ export default function CartPage() {
               </div>
               <div className="flex justify-between mb-2 text-sm">
                 <span>Sub Total</span>
-                <span>{cartData ? `${cartData.totalOriginalPrice?.toLocaleString()} USD` : "-"}</span>
+                <span>{cartData ? `₹${cartData.totalOriginalPrice?.toLocaleString()}` : "-"}</span>
               </div>
               <div className="flex justify-between mb-2 text-sm">
                 <span>Discount (10%)</span>
-                <span className="text-green-700">{cartData ? `-${cartData.totalDiscount?.toLocaleString()}USD` : "-"}</span>
+                <span className="text-green-700">{cartData ? `-₹${cartData.totalDiscount?.toLocaleString()}` : "-"}</span>
               </div>
               <div className="flex justify-between mb-2 text-sm">
                 <span>Delivery fee</span>
-                <span>{cartData ? `${cartData.shippingCharge?.toLocaleString()} USD` : "-"}</span>
+                <span>{cartData ? `₹${cartData.shippingCharge?.toLocaleString()}` : "-"}</span>
               </div>
               <div className="flex justify-between items-center mt-4 mb-2 text-lg font-bold">
                 <span>Total</span>
-                <span>{cartData ? `$${cartData.finalTotal?.toLocaleString()} USD` : "-"}</span>
+                <span>{cartData ? `₹${cartData.finalTotal?.toLocaleString()}` : "-"}</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-gray-500 mb-4">
                 <span className="inline-block w-4 h-4 rounded-full border border-gray-300 flex-shrink-0 flex items-center justify-center mr-1">✓</span>
                 90 Day Limited Warranty against manufacturer's defects <span className="underline cursor-pointer">Details</span>
               </div>
-              <button className="w-full mt-2 bg-black text-white rounded-full py-3 font-semibold text-lg hover:bg-gray-900 transition">Checkout Now</button>
+              <button 
+                className="w-full mt-2 bg-black text-white rounded-full py-3 font-semibold text-lg hover:bg-gray-900 transition"
+                onClick={handleCheckout}
+              >
+                Checkout Now
+              </button>
             </div>
           </div>
         </div>
