@@ -137,3 +137,21 @@ export async function removeFromCart({ userId, productId }: { userId: string; pr
   }
   return data;
 }
+
+export async function getLikedProducts() {
+  const token = Cookies.get("token");
+  if (!token) {
+    toast.error("Please login to view liked products");
+    throw new Error("Authentication token not found");
+  }
+  const url = `${BASE_URL}/api/user-actions/liked-products`;
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    throw new Error("Failed to fetch liked products");
+  }
+  return res.json();
+}

@@ -60,7 +60,7 @@ const Navbar = () => {
                         <span className="flex items-center cursor-pointer h-6 w-6">
                             <img src="/icons/bell.svg" alt="Notification" width={24} height={24} />
                         </span> */}
-                        <span className="flex items-center cursor-pointer h-6 w-6">
+                        <span className="flex items-center cursor-pointer h-6 w-6" onClick={() => router.push("/liked")}> 
                             <img src="/icons/heart.svg" alt="Favourites" width={24} height={24} />
                         </span>
                         <span className="flex items-center cursor-pointer h-6 w-6" onClick={() => router.push("/cart")}> 
@@ -78,7 +78,7 @@ const Navbar = () => {
                     <img src="/logo.svg" alt="Home" width={28} height={28} className="mb-1" />
                     <span className="text-xs text-gray-600">Home</span>
                 </span>
-                <span className="flex flex-col items-center cursor-pointer"> 
+                <span className="flex flex-col items-center cursor-pointer" onClick={() => router.push("/liked")}> 
                     <img src="/icons/heart.svg" alt="Favourites" width={28} height={28} className="mb-1" />
                     <span className="text-xs text-gray-600">Wishlist</span>
                 </span>
