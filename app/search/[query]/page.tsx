@@ -44,13 +44,13 @@ export default function SearchPage() {
                         </div>
                     ) : (
                         <>
-                            <div className="text-center w-full">
+                            {/* <div className="text-center w-full">
                                 <h1>
                                     Found {results.length} results for <b>{productName}</b>
                                 </h1>
                                 {error && <p style={{ color: "red" }}>{error}</p>}
-                            </div>
-                            <div className="flex flex-col mt-6">
+                            </div> */}
+                            <div className="flex flex-col mt-0">
                                 {results.map((product) => (
                                     <ProductCard key={product.productId} product={product} />
                                 ))}
