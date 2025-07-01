@@ -4,15 +4,18 @@ import Navbar from "@/components/NavBar";
 import { useEffect, useState } from "react";
 import { getUser } from "@/utils/storage";
 import { getCartItems } from "@/lib/api/products";
-import { FaMapMarkerAlt, FaCreditCard, FaLock, FaCheckCircle } from "react-icons/fa";
-import { MdLocationOn, MdPayment, MdSecurity } from "react-icons/md";
+import { FaMapMarkerAlt, FaLock, FaCheckCircle } from "react-icons/fa";
+import { MdLocationOn } from "react-icons/md";
 import MapSelector from "@/components/MapSelector";
+import Script from "next/script";
+import { useRouter } from "next/navigation";
 
 export default function PaymentPage() {
   const [cartData, setCartData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'address' | 'payment'>('address');
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'processing' | 'paid' | 'failed'>('pending');
+  const [orderId, setOrderId] = useState<string | null>(null);
   
   // Address form state
   const [addressForm, setAddressForm] = useState({
@@ -26,21 +29,16 @@ export default function PaymentPage() {
     country: 'India'
   });
 
-  // Payment form state
-  const [paymentForm, setPaymentForm] = useState({
-    cardNumber: '',
-    cardHolder: '',
-    expiryDate: '',
-    cvv: '',
-    saveCard: false
-  });
-
   // Map location state
   const [mapLocation, setMapLocation] = useState({
     lat: 40.7128,
     lng: -74.0060,
     address: ''
   });
+
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const router = useRouter();
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   useEffect(() => {
     const fetchCart = async () => {
@@ -54,7 +52,7 @@ export default function PaymentPage() {
         const data = await getCartItems(user.userId);
         setCartData(data);
       } catch (err: any) {
-        setError(err.message || "Unknown error");
+        setError(err.message || "Failed to load cart items");
       } finally {
         setLoading(false);
       }
@@ -69,32 +67,195 @@ export default function PaymentPage() {
     }));
   };
 
-  const handlePaymentChange = (field: string, value: string) => {
-    setPaymentForm(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const validateAddressForm = () => {
+    const requiredFields = ['fullName', 'email', 'phone', 'address', 'city', 'state', 'zipCode'];
+    const missingFields = requiredFields.filter(field => !addressForm);
+    
+    if (missingFields.length > 0) {
+      alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
+      return false;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(addressForm.email)) {
+      alert("Please enter a valid email address");
+      return false;
+    }
+    
+    // Validate phone number (simple check for Indian numbers)
+    const phoneRegex = /^[6-9]\d{9}$/;
+    if (!phoneRegex.test(addressForm.phone)) {
+      alert("Please enter a valid 10-digit Indian phone number");
+      return false;
+    }
+    
+    return true;
   };
 
-  const handleSubmit = async () => {
-    // Handle payment submission
-    console.log('Payment submitted:', { addressForm, paymentForm, cartData });
+  const verifyPaymentWithBackend = async (paymentResponse: any, orderId: string) => {
+    try {
+      setPaymentStatus('processing');
+      
+      const verificationResponse = await fetch(`${apiBaseUrl}/api/payment/razorpay/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          razorpay_payment_id: paymentResponse.razorpay_payment_id,
+          razorpay_order_id: paymentResponse.razorpay_order_id,
+          razorpay_signature: paymentResponse.razorpay_signature,
+          orderId: orderId
+        }),
+      });
+
+      const verificationData = await verificationResponse.json();
+
+      if (!verificationResponse.ok || !verificationData.success) {
+        throw new Error(verificationData.message || 'Payment verification failed');
+      }
+
+      setPaymentStatus('paid');
+      router.push(`/order-success/${orderId}`);
+
+    } catch (error: any) {
+      console.error('Payment verification error:', error);
+      setPaymentStatus('failed');
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    const matches = v.match(/\d{4,16}/g);
-    const match = matches && matches[0] || '';
-    const parts = [];
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
+  const handleRazorpay = async () => {
+    if (!razorpayLoaded) {
+      alert("Payment gateway is still loading. Please wait a moment and try again.");
+      return;
     }
-    if (parts.length) {
-      return parts.join(' ');
-    } else {
-      return v;
+
+    if (!validateAddressForm()) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const item = cartData?.items?.[0];
+      if (!item) {
+        throw new Error("No cart item found!");
+      }
+
+      const orderRequestBody = {
+        userId: getUser().userId,
+        sellerId: item.sellerId,
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantity,
+        productPrice: item.price,
+        GST: item.GST,
+        deliveryCharges: cartData.shippingCharge,
+        otherCharges: 20,
+        address: `${addressForm.address}, ${addressForm.city}, ${addressForm.state}, ${addressForm.zipCode}`,
+        paymentMethod: "razorpay"
+      };
+
+      // 1. Create order in your DB first
+      const orderRes = await fetch(`${apiBaseUrl}/api/orders/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderRequestBody),
+        credentials: "include"
+      });
+
+      if (!orderRes.ok) {
+        const errorData = await orderRes.json();
+        throw new Error(errorData.message || "Order creation failed");
+      }
+
+      const orderData = await orderRes.json();
+      const appOrderId = orderData.order.orderId;
+      setOrderId(appOrderId);
+
+      // 2. Create Razorpay order
+      const totalAmount = Math.round(cartData.finalTotal * 100);
+      const razorpayOrderRes = await fetch(`${apiBaseUrl}/api/payment/razorpay/order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: totalAmount,
+          receipt: appOrderId,
+        }),
+      });
+
+      if (!razorpayOrderRes.ok) {
+        const errorData = await razorpayOrderRes.json();
+        throw new Error(errorData.message || "Failed to create Razorpay order");
+      }
+
+      const razorpayData = await razorpayOrderRes.json();
+
+      // 3. Open Razorpay modal
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: razorpayData.order.amount,
+        currency: razorpayData.order.currency,
+        name: "Eden's Store",
+        description: "Order Payment",
+        order_id: razorpayData.order.id,
+        handler: async function (response: any) {
+          verifyPaymentWithBackend(response, appOrderId);
+        },
+        prefill: {
+          name: addressForm.fullName,
+          email: addressForm.email,
+          contact: addressForm.phone,
+        },
+        notes: {
+          orderId: appOrderId
+        },
+        theme: { color: "#0f172a" },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+      
+      rzp.on('payment.failed', function (response: any) {
+        console.error("Payment failed:", response.error);
+        setPaymentStatus('failed');
+        setError(response.error.description);
+        setLoading(false);
+      });
+
+    } catch (error: any) {
+      console.error("Payment error:", error);
+      setPaymentStatus('failed');
+      setError(error.message);
+      setLoading(false);
     }
   };
+
+  // Check for pending payments on component mount
+  useEffect(() => {
+    const checkPendingPayment = async () => {
+      const pendingOrderId = localStorage.getItem('pendingOrderId');
+      if (pendingOrderId) {
+        try {
+          const statusRes = await fetch(`${apiBaseUrl}/api/payment/status/${pendingOrderId}`);
+          const statusData = await statusRes.json();
+          
+          if (statusData.paymentStatus === 'paid') {
+            router.push(`/order-success/${pendingOrderId}`);
+          } else {
+            localStorage.removeItem('pendingOrderId');
+          }
+        } catch (error) {
+          console.error('Error checking pending payment:', error);
+          localStorage.removeItem('pendingOrderId');
+        }
+      }
+    };
+
+    checkPendingPayment();
+  }, [router]);
 
   return (
     <>
@@ -108,271 +269,146 @@ export default function PaymentPage() {
           {/* Left: Payment Form */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl border border-gray-300 p-6 mb-6">
-              {/* Tab Navigation */}
               <div className="flex mb-6 border-b border-gray-200">
                 <button
-                  className={`flex items-center gap-2 px-6 py-3 font-semibold transition ${
-                    activeTab === 'address'
-                      ? 'text-blue-600 border-b-2 border-blue-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                  onClick={() => setActiveTab('address')}
+                  className="flex items-center gap-2 px-6 py-3 font-semibold text-blue-600 border-b-2 border-blue-600 transition"
+                  disabled
                 >
                   <MdLocationOn className="text-lg" />
                   Shipping Address
                 </button>
-                <button
-                  className={`flex items-center gap-2 px-6 py-3 font-semibold transition ${
-                    activeTab === 'payment'
-                      ? 'text-blue-600 border-b-2 border-blue-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                  onClick={() => setActiveTab('payment')}
-                >
-                  <MdPayment className="text-lg" />
-                  Payment Method
-                </button>
               </div>
 
-              {/* Address Tab */}
-              {activeTab === 'address' && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Full Name *
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                        value={addressForm.fullName}
-                        onChange={(e) => handleAddressChange('fullName', e.target.value)}
-                        placeholder="Enter your full name"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email *
-                      </label>
-                      <input
-                        type="email"
-                        className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                        value={addressForm.email}
-                        onChange={(e) => handleAddressChange('email', e.target.value)}
-                        placeholder="Enter your email"
-                      />
-                    </div>
-                  </div>
-
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone Number *
+                      Full Name *
                     </label>
                     <input
-                      type="tel"
+                      type="text"
                       className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                      value={addressForm.phone}
-                      onChange={(e) => handleAddressChange('phone', e.target.value)}
-                      placeholder="Enter your phone number"
+                      value={addressForm.fullName}
+                      onChange={(e) => handleAddressChange('fullName', e.target.value)}
+                      placeholder="Enter your full name"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                      value={addressForm.email}
+                      onChange={(e) => handleAddressChange('email', e.target.value)}
+                      placeholder="Enter your email"
+                    />
+                  </div>
+                </div>
 
-                  {/* Map Location Selection */}
-                  <MapSelector
-                    onLocationSelect={(location) => {
-                      setMapLocation(location);
-                      // Parse Indian address format: "Street, City, State PIN"
-                      const addressParts = location.address.split(', ');
-                      setAddressForm(prev => ({
-                        ...prev,
-                        address: addressParts[0] || '',
-                        city: addressParts[1] || '',
-                        state: addressParts[2] || '',
-                        zipCode: addressParts[3] || ''
-                      }));
-                    }}
-                    selectedLocation={mapLocation}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    value={addressForm.phone}
+                    onChange={(e) => handleAddressChange('phone', e.target.value)}
+                    placeholder="Enter your phone number"
                   />
+                </div>
 
+                <MapSelector
+                  onLocationSelect={(location) => {
+                    setMapLocation(location);
+                    const addressParts = location.address.split(', ');
+                    setAddressForm(prev => ({
+                      ...prev,
+                      address: addressParts[0] || '',
+                      city: addressParts[1] || '',
+                      state: addressParts[2] || '',
+                      zipCode: addressParts[3] || ''
+                    }));
+                  }}
+                  selectedLocation={mapLocation}
+                />
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Street Address *
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    value={addressForm.address}
+                    onChange={(e) => handleAddressChange('address', e.target.value)}
+                    placeholder="Enter your street address"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Street Address *
+                      City *
                     </label>
                     <input
                       type="text"
                       className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                      value={addressForm.address}
-                      onChange={(e) => handleAddressChange('address', e.target.value)}
-                      placeholder="Enter your street address"
+                      value={addressForm.city}
+                      onChange={(e) => handleAddressChange('city', e.target.value)}
+                      placeholder="City"
                     />
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        City *
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                        value={addressForm.city}
-                        onChange={(e) => handleAddressChange('city', e.target.value)}
-                        placeholder="City"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        State *
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                        value={addressForm.state}
-                        onChange={(e) => handleAddressChange('state', e.target.value)}
-                        placeholder="State"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        ZIP Code *
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                        value={addressForm.zipCode}
-                        onChange={(e) => handleAddressChange('zipCode', e.target.value)}
-                        placeholder="ZIP Code"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
-                    <input
-                      type="text"
-                      className="w-full rounded-lg border border-gray-300 px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                      value={addressForm.country}
-                      readOnly
-                      disabled
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Currently serving India only</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Payment Tab */}
-              {activeTab === 'payment' && (
-                <div className="space-y-6">
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-blue-800">
-                      <MdSecurity className="text-lg" />
-                      <span className="font-semibold">Secure Payment</span>
-                    </div>
-                    <p className="text-sm text-blue-700 mt-1">
-                      Your payment information is encrypted and secure
-                    </p>
-                  </div>
-
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Card Number *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        className="w-full rounded-lg border border-gray-300 px-4 py-3 pl-12 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                        value={paymentForm.cardNumber}
-                        onChange={(e) => handlePaymentChange('cardNumber', formatCardNumber(e.target.value))}
-                        placeholder="1234 5678 9012 3456"
-                        maxLength={19}
-                      />
-                      <FaCreditCard className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cardholder Name *
+                      State *
                     </label>
                     <input
                       type="text"
                       className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                      value={paymentForm.cardHolder}
-                      onChange={(e) => handlePaymentChange('cardHolder', e.target.value)}
-                      placeholder="Name on card"
+                      value={addressForm.state}
+                      onChange={(e) => handleAddressChange('state', e.target.value)}
+                      placeholder="State"
                     />
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Expiry Date *
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                        value={paymentForm.expiryDate}
-                        onChange={(e) => handlePaymentChange('expiryDate', e.target.value)}
-                        placeholder="MM/YY"
-                        maxLength={5}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        CVV *
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                        value={paymentForm.cvv}
-                        onChange={(e) => handlePaymentChange('cvv', e.target.value)}
-                        placeholder="123"
-                        maxLength={4}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="saveCard"
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      checked={paymentForm.saveCard}
-                      onChange={(e) => setPaymentForm(prev => ({ ...prev, saveCard: e.target.checked }))}
-                    />
-                    <label htmlFor="saveCard" className="text-sm text-gray-700">
-                      Save this card for future purchases
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      ZIP Code *
                     </label>
+                    <input
+                      type="text"
+                      className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                      value={addressForm.zipCode}
+                      onChange={(e) => handleAddressChange('zipCode', e.target.value)}
+                      placeholder="ZIP Code"
+                    />
                   </div>
                 </div>
-              )}
 
-              {/* Navigation Buttons */}
-              <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
-                {activeTab === 'payment' && (
-                  <button
-                    onClick={() => setActiveTab('address')}
-                    className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-                  >
-                    Back to Address
-                  </button>
-                )}
-                {activeTab === 'address' && (
-                  <button
-                    onClick={() => setActiveTab('payment')}
-                    className="ml-auto px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                  >
-                    Continue to Payment
-                  </button>
-                )}
-                {activeTab === 'payment' && (
-                  <button
-                    onClick={handleSubmit}
-                    className="ml-auto px-8 py-3 bg-black text-white rounded-lg hover:bg-gray-900 transition font-semibold"
-                  >
-                    Pay Now
-                  </button>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    value={addressForm.country}
+                    readOnly
+                    disabled
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Currently serving India only</p>
+                </div>
+              </div>
+
+              <div className="flex justify-end mt-8 pt-6 border-t border-gray-200">
+                <button
+                  onClick={handleRazorpay}
+                  className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold disabled:opacity-50"
+                  disabled={loading || !razorpayLoaded || paymentStatus === 'processing'}
+                >
+                  {paymentStatus === 'processing' ? 'Processing Payment...' : 
+                   loading ? 'Loading...' : 'Continue to Payment'}
+                </button>
               </div>
             </div>
           </div>
@@ -382,8 +418,12 @@ export default function PaymentPage() {
             <div className="bg-white rounded-2xl border border-gray-300 p-6 mb-6">
               <div className="font-semibold mb-4">Order Summary</div>
               
-              {loading && <div className="text-gray-500">Loading...</div>}
-              {error && <div className="text-red-500">{error}</div>}
+              {loading && !cartData && <div className="text-gray-500">Loading...</div>}
+              {error && (
+                <div className="p-4 mb-4 text-red-700 bg-red-100 rounded-lg">
+                  {error}
+                </div>
+              )}
               
               {cartData && (
                 <>
@@ -429,6 +469,12 @@ export default function PaymentPage() {
           </div>
         </div>
       </div>
+
+      <Script
+        src="https://checkout.razorpay.com/v1/checkout.js"
+        strategy="afterInteractive"
+        onLoad={() => setRazorpayLoaded(true)}
+      />
     </>
   );
 }
